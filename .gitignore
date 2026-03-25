@@ -5,6 +5,7 @@ node_modules
 real-time-collaborative-notes-app-frontend/node_modules
 real-time-collaborative-notes-app-frontend/.next
 real-time-collaborative-notes-app-frontend/.env.local
+real-time-collaborative-notes-app-frontend/
 
 real-time-collaborative-notes-app-backend/node_modules
 real-time-collaborative-notes-app-backend/dist
