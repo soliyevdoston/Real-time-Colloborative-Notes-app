@@ -2,11 +2,11 @@ node_modules
 .DS_Store
 *.log
 
-frontend/node_modules
-frontend/.next
-frontend/.env.local
+real-time-collaborative-notes-app-frontend/node_modules
+real-time-collaborative-notes-app-frontend/.next
+real-time-collaborative-notes-app-frontend/.env.local
 
-backend/node_modules
-backend/dist
-backend/.env
-backend/prisma/migrations
+real-time-collaborative-notes-app-backend/node_modules
+real-time-collaborative-notes-app-backend/dist
+real-time-collaborative-notes-app-backend/.env
+real-time-collaborative-notes-app-backend/uploads

@@ -5,6 +5,7 @@ Hiring-grade mini Google Docs implementation with:
 - Cabinet/Profile (name update + avatar upload)
 - Notes CRUD
 - Collaboration (owner invites collaborators by email)
+- Invite flow (pending invites by email + auto-access after login/register)
 - Real-time editing (TipTap + Y.js + Hocuspocus)
 - Presence + online users (Socket.IO)
 - Comments (real-time create/resolve)
@@ -12,8 +13,8 @@ Hiring-grade mini Google Docs implementation with:
 
 ## Repository structure
 
-- `frontend/` → Next.js 16 + TypeScript
-- `backend/` → Express.js + Socket.IO + Hocuspocus + Prisma + PostgreSQL
+- `real-time-collaborative-notes-app-frontend/` (Next.js 16 + TypeScript)
+- `real-time-collaborative-notes-app-backend/` (Express.js + Socket.IO + Hocuspocus + Prisma + PostgreSQL)
 
 ## Tech Stack
 
@@ -37,13 +38,14 @@ Hiring-grade mini Google Docs implementation with:
 2. Hocuspocus server handles realtime document sync for note bodies.
 3. Socket.IO handles presence, online users, comment events, version-created notifications.
 4. Prisma persists users/notes/members/comments/versions/refresh tokens.
+5. Profile cabinet supports avatar upload and user info updates.
 
 ## Local setup
 
-## 1) Backend
+## 1) real-time-collaborative-notes-app-backend
 
 ```bash
-cd backend
+cd real-time-collaborative-notes-app-backend
 cp .env.example .env
 npm install
 npm run prisma:generate
@@ -55,10 +57,10 @@ Backend runs on:
 - API: `http://localhost:4000`
 - Hocuspocus WS: `ws://localhost:1234`
 
-## 2) Frontend
+## 2) real-time-collaborative-notes-app-frontend
 
 ```bash
-cd frontend
+cd real-time-collaborative-notes-app-frontend
 cp .env.example .env.local
 npm install
 npm run dev
@@ -69,7 +71,7 @@ Frontend runs on:
 
 ## Environment variables
 
-### Backend (`backend/.env`)
+### real-time-collaborative-notes-app-backend (`real-time-collaborative-notes-app-backend/.env`)
 - `PORT=4000`
 - `HOCUSPOCUS_PORT=1234`
 - `FRONTEND_URL=http://localhost:3000`
@@ -80,10 +82,16 @@ Frontend runs on:
 - `ACCESS_TOKEN_TTL=15m`
 - `REFRESH_TOKEN_TTL_DAYS=7`
 
-### Frontend (`frontend/.env.local`)
+### real-time-collaborative-notes-app-frontend (`real-time-collaborative-notes-app-frontend/.env.local`)
 - `NEXT_PUBLIC_API_URL=http://localhost:4000/api`
 - `NEXT_PUBLIC_SOCKET_URL=http://localhost:4000`
 - `NEXT_PUBLIC_COLLAB_URL=ws://localhost:1234`
+
+## Frontend routes
+
+- `/dashboard` notes list and create/delete
+- `/notes/:id` collaborative editor + comments/history/collaborators
+- `/cabinet` profile settings (name + avatar upload)
 
 ## API summary
 
@@ -102,10 +110,13 @@ Frontend runs on:
 - `GET /api/notes/:noteId`
 - `PATCH /api/notes/:noteId`
 - `DELETE /api/notes/:noteId`
+- `PATCH /api/notes/:noteId/share` (`RESTRICTED|ANYONE_WITH_LINK` + `VIEW|EDIT`)
 
 ### Collaborators
 - `POST /api/notes/:noteId/collaborators`
 - `DELETE /api/notes/:noteId/collaborators/:userId`
+- `GET /api/notes/:noteId/invites`
+- `DELETE /api/notes/:noteId/invites/:inviteId`
 
 ### Comments
 - `GET /api/notes/:noteId/comments`
@@ -130,9 +141,27 @@ Server emits:
 - `comment:created`
 - `comment:resolved`
 - `version:created`
+- `share:updated`
 
 ## Build check
 
 Validated locally:
-- `cd backend && npm run build` ✅
-- `cd frontend && npm run build` ✅
+- `cd real-time-collaborative-notes-app-backend && npm run build` ✅
+- `cd real-time-collaborative-notes-app-frontend && npm run build` ✅
+
+## Integration test (all core features)
+
+Backend includes automated smoke integration tests for:
+- Auth flow (`register/login/refresh/logout/me`)
+- Notes CRUD
+- Collaborator add/remove
+- Link-based access (`VIEW` / `EDIT`)
+- Comments permissions
+- Pending invite auto-accept after signup
+
+Run:
+
+```bash
+cd real-time-collaborative-notes-app-backend
+npm run test
+```
