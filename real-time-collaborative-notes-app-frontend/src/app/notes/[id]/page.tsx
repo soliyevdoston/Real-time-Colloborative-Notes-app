@@ -99,19 +99,20 @@ const NotePageContent = () => {
   const noteQuery = useQuery({
     queryKey: ["note", noteId],
     queryFn: async () => {
-      const response = await authenticatedFetch("/notes/" + noteId);
+      const response = await authenticatedFetch(`/notes/${noteId}`);
       if (!response.ok) {
         throw new Error(await parseApiError(response));
       }
 
       return (await response.json()) as NoteResponse;
     },
+    enabled: Boolean(noteId),
   });
 
   const commentsQuery = useQuery({
     queryKey: ["comments", noteId],
     queryFn: async () => {
-      const response = await authenticatedFetch("/notes/" + noteId + "/comments");
+      const response = await authenticatedFetch(`/notes/${noteId}/comments`);
       if (!response.ok) {
         throw new Error(await parseApiError(response));
       }
@@ -119,12 +120,13 @@ const NotePageContent = () => {
       const data = (await response.json()) as { comments: CommentItem[] };
       return data.comments;
     },
+    enabled: Boolean(noteId),
   });
 
   const versionsQuery = useQuery({
     queryKey: ["versions", noteId],
     queryFn: async () => {
-      const response = await authenticatedFetch("/notes/" + noteId + "/versions");
+      const response = await authenticatedFetch(`/notes/${noteId}/versions`);
       if (!response.ok) {
         throw new Error(await parseApiError(response));
       }
@@ -132,16 +134,14 @@ const NotePageContent = () => {
       const data = (await response.json()) as { versions: NoteVersion[] };
       return data.versions;
     },
+    enabled: Boolean(noteId),
   });
 
   const collaboratorSuggestionsQuery = useQuery({
     queryKey: ["collaborator-suggestions", noteId, inviteEmailTrimmed],
     queryFn: async () => {
       const response = await authenticatedFetch(
-        "/notes/" +
-          noteId +
-          "/collaborators/suggestions?query=" +
-          encodeURIComponent(inviteEmailTrimmed),
+        `/notes/${noteId}/collaborators/suggestions?query=${encodeURIComponent(inviteEmailTrimmed)}`,
       );
       if (!response.ok) {
         throw new Error(await parseApiError(response));
@@ -151,14 +151,16 @@ const NotePageContent = () => {
       return data.users;
     },
     enabled:
-      Boolean(noteQuery.data?.note.currentAccessRole === "OWNER") && inviteEmailTrimmed.length >= 2,
+      Boolean(noteId) &&
+      Boolean(noteQuery.data?.note.currentAccessRole === "OWNER") &&
+      inviteEmailTrimmed.length >= 2,
     staleTime: 5000,
   });
 
   const pendingInvitesQuery = useQuery({
     queryKey: ["pending-invites", noteId],
     queryFn: async () => {
-      const response = await authenticatedFetch("/notes/" + noteId + "/invites");
+      const response = await authenticatedFetch(`/notes/${noteId}/invites`);
       if (!response.ok) {
         throw new Error(await parseApiError(response));
       }
@@ -166,7 +168,7 @@ const NotePageContent = () => {
       const data = (await response.json()) as NoteInvitesResponse;
       return data.invites;
     },
-    enabled: Boolean(noteQuery.data?.note.currentAccessRole === "OWNER"),
+    enabled: Boolean(noteId) && Boolean(noteQuery.data?.note.currentAccessRole === "OWNER"),
     staleTime: 5000,
   });
 
@@ -194,7 +196,7 @@ const NotePageContent = () => {
     }
 
     const timeout = setTimeout(async () => {
-      const response = await authenticatedFetch("/notes/" + noteId, {
+      const response = await authenticatedFetch(`/notes/${noteId}`, {
         method: "PATCH",
         body: JSON.stringify({ title: nextTitle }),
       });
@@ -336,7 +338,7 @@ const NotePageContent = () => {
 
   const inviteMutation = useMutation({
     mutationFn: async () => {
-      const response = await authenticatedFetch("/notes/" + noteId + "/collaborators", {
+      const response = await authenticatedFetch(`/notes/${noteId}/collaborators`, {
         method: "POST",
         body: JSON.stringify({ email: inviteEmailTrimmed }),
       });
@@ -362,16 +364,13 @@ const NotePageContent = () => {
       void queryClient.invalidateQueries({ queryKey: ["pending-invites", noteId] });
     },
     onError: (err) => {
-      setNotice({
-        type: "error",
-        text: err instanceof Error ? err.message : "Hamkor qo'shishda xatolik yuz berdi",
-      });
+      setErrorNotice(err, "Hamkor qo'shishda xatolik yuz berdi");
     },
   });
 
   const removeMutation = useMutation({
     mutationFn: async (memberUserId: string) => {
-      const response = await authenticatedFetch("/notes/" + noteId + "/collaborators/" + memberUserId, {
+      const response = await authenticatedFetch(`/notes/${noteId}/collaborators/${memberUserId}`, {
         method: "DELETE",
       });
 
@@ -384,16 +383,13 @@ const NotePageContent = () => {
       void queryClient.invalidateQueries({ queryKey: ["note", noteId] });
     },
     onError: (err) => {
-      setNotice({
-        type: "error",
-        text: err instanceof Error ? err.message : "Hamkorni olib tashlashda xatolik yuz berdi",
-      });
+      setErrorNotice(err, "Hamkorni olib tashlashda xatolik yuz berdi");
     },
   });
 
   const removeInviteMutation = useMutation({
     mutationFn: async (inviteId: string) => {
-      const response = await authenticatedFetch("/notes/" + noteId + "/invites/" + inviteId, {
+      const response = await authenticatedFetch(`/notes/${noteId}/invites/${inviteId}`, {
         method: "DELETE",
       });
 
@@ -406,16 +402,13 @@ const NotePageContent = () => {
       void queryClient.invalidateQueries({ queryKey: ["pending-invites", noteId] });
     },
     onError: (err) => {
-      setNotice({
-        type: "error",
-        text: err instanceof Error ? err.message : "Taklifni olib tashlashda xatolik yuz berdi",
-      });
+      setErrorNotice(err, "Taklifni olib tashlashda xatolik yuz berdi");
     },
   });
 
   const shareMutation = useMutation({
     mutationFn: async () => {
-      const response = await authenticatedFetch("/notes/" + noteId + "/share", {
+      const response = await authenticatedFetch(`/notes/${noteId}/share`, {
         method: "PATCH",
         body: JSON.stringify({
           linkAccess: shareAccessDraft,
@@ -435,17 +428,14 @@ const NotePageContent = () => {
       void queryClient.invalidateQueries({ queryKey: ["note", noteId] });
     },
     onError: (err) => {
-      setNotice({
-        type: "error",
-        text: err instanceof Error ? err.message : "Ulashish sozlamasini saqlashda xatolik yuz berdi",
-      });
+      setErrorNotice(err, "Ulashish sozlamasini saqlashda xatolik yuz berdi");
     },
   });
 
   const restoreMutation = useMutation({
     mutationFn: async (versionId: string) => {
       const response = await authenticatedFetch(
-        "/notes/" + noteId + "/versions/" + versionId + "/restore",
+        `/notes/${noteId}/versions/${versionId}/restore`,
         {
           method: "POST",
         },
@@ -459,10 +449,7 @@ const NotePageContent = () => {
       window.location.reload();
     },
     onError: (err) => {
-      setNotice({
-        type: "error",
-        text: err instanceof Error ? err.message : "Versiyani qaytarishda xatolik yuz berdi",
-      });
+      setErrorNotice(err, "Versiyani qaytarishda xatolik yuz berdi");
     },
   });
 
@@ -480,13 +467,10 @@ const NotePageContent = () => {
       return (await response.json()) as { note: NoteSummary };
     },
     onSuccess: ({ note: createdNote }) => {
-      router.push("/notes/" + createdNote.id);
+      router.push(`/notes/${createdNote.id}`);
     },
     onError: (err) => {
-      setNotice({
-        type: "error",
-        text: err instanceof Error ? err.message : "Yangi hujjat yaratishda xatolik",
-      });
+      setErrorNotice(err, "Yangi hujjat yaratishda xatolik");
     },
   });
 
@@ -643,11 +627,8 @@ const NotePageContent = () => {
         default:
           break;
       }
-    } catch {
-      setNotice({
-        type: "error",
-        text: "Menyu amalini bajarishda xatolik yuz berdi.",
-      });
+    } catch (error) {
+      setErrorNotice(error, "Menyu amalini bajarishda xatolik yuz berdi.");
     } finally {
       setOpenMenu(null);
     }
@@ -766,6 +747,8 @@ const NotePageContent = () => {
           </button>
         </div>
       </div>
+
+      {!noteId ? <p className="error-text">Hujjat identifikatori topilmadi.</p> : null}
 
       {noteQuery.isLoading ? <p>Hujjat yuklanmoqda...</p> : null}
       {noteQuery.error ? <p className="error-text">{(noteQuery.error as Error).message}</p> : null}
