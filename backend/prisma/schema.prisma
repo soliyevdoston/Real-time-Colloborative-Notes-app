@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  EDITOR
+}
+
+model User {
+  id           String         @id @default(cuid())
+  name         String
+  email        String         @unique
+  avatarUrl    String?
+  passwordHash String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  notesOwned   Note[]         @relation("OwnedNotes")
+  noteMembers  NoteMember[]
+  comments     Comment[]
+  refreshTokens RefreshToken[]
+  versions     NoteVersion[]  @relation("VersionAuthor")
+}
+
+model Note {
+  id               String       @id @default(cuid())
+  title            String
+  ownerId          String
+  ydocState        String?
+  ydocStateHash    String?
+  lastVersionAt    DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  owner            User         @relation("OwnedNotes", fields: [ownerId], references: [id], onDelete: Cascade)
+  members          NoteMember[]
+  comments         Comment[]
+  versions         NoteVersion[]
+
+  @@index([ownerId])
+}
+
+model NoteMember {
+  id        String   @id @default(cuid())
+  noteId    String
+  userId    String
+  role      Role
+  createdAt DateTime @default(now())
+
+  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([noteId, userId])
+  @@index([userId])
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  noteId      String
+  authorId    String
+  body        String
+  resolved    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  resolvedAt  DateTime?
+
+  note       Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([noteId, createdAt])
+}
+
+model NoteVersion {
+  id          String   @id @default(cuid())
+  noteId       String
+  state        String
+  createdById  String?
+  createdAt    DateTime @default(now())
+
+  note        Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  createdBy   User?    @relation("VersionAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([noteId, createdAt])
+}
+
+model RefreshToken {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
