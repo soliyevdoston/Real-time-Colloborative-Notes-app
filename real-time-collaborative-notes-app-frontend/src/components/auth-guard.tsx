@@ -1,21 +1,23 @@
 "use client";
 
 import { useAuth } from "@/contexts/auth-context";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PropsWithChildren, useEffect } from "react";
 
 export const AuthGuard = ({ children }: PropsWithChildren) => {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (!isLoading && !user) {
-      const query = typeof window !== "undefined" ? window.location.search : "";
-      const nextPath = pathname + query;
+      const query = searchParams.toString();
+      const search = query ? `?${query}` : "";
+      const nextPath = pathname + search;
       router.replace("/auth/login?next=" + encodeURIComponent(nextPath));
     }
-  }, [isLoading, pathname, router, user]);
+  }, [isLoading, pathname, router, searchParams, user]);
 
   if (isLoading) {
     return <div className="center-shell">Ish maydoni yuklanmoqda...</div>;

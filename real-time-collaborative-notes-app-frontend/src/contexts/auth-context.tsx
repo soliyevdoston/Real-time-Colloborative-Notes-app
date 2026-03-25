@@ -12,12 +12,28 @@ import {
 import { apiUrl, parseApiError } from "@/lib/api";
 import { AuthUser } from "@/lib/types";
 
+type LoginInput = {
+  email: string;
+  password: string;
+};
+
+type RegisterInput = {
+  name: string;
+  email: string;
+  password: string;
+};
+
+type AuthResponse = {
+  user: AuthUser;
+  accessToken: string;
+};
+
 type AuthContextValue = {
   user: AuthUser | null;
   accessToken: string | null;
   isLoading: boolean;
-  login: (input: { email: string; password: string }) => Promise<void>;
-  register: (input: { name: string; email: string; password: string }) => Promise<void>;
+  login: (input: LoginInput) => Promise<void>;
+  register: (input: RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
   authenticatedFetch: (path: string, init?: RequestInit) => Promise<Response>;
   refreshSession: () => Promise<void>;
@@ -27,14 +43,8 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 const ACCESS_TOKEN_KEY = "collab_notes_access_token";
 
-const parseAuthResponse = async (response: Response): Promise<{ user: AuthUser; accessToken: string }> => {
-  const data = (await response.json()) as {
-    user: AuthUser;
-    accessToken: string;
-  };
-
-  return data;
-};
+const parseAuthResponse = async (response: Response): Promise<AuthResponse> =>
+  (await response.json()) as AuthResponse;
 
 export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -52,6 +62,27 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     setAccessToken(null);
     localStorage.removeItem(ACCESS_TOKEN_KEY);
   }, []);
+
+  const authenticate = useCallback(
+    async (path: "/auth/login" | "/auth/register", body: LoginInput | RegisterInput) => {
+      const response = await fetch(apiUrl(path), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        throw new Error(await parseApiError(response));
+      }
+
+      const data = await parseAuthResponse(response);
+      setSession(data.user, data.accessToken);
+    },
+    [setSession],
+  );
 
   const refreshSession = useCallback(async () => {
     const response = await fetch(apiUrl("/auth/refresh"), {
@@ -89,46 +120,11 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     void bootstrap();
   }, [clearSession, refreshSession]);
 
-  const login = useCallback(
-    async (input: { email: string; password: string }) => {
-      const response = await fetch(apiUrl("/auth/login"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(input),
-      });
-
-      if (!response.ok) {
-        throw new Error(await parseApiError(response));
-      }
-
-      const data = await parseAuthResponse(response);
-      setSession(data.user, data.accessToken);
-    },
-    [setSession],
-  );
+  const login = useCallback(async (input: LoginInput) => authenticate("/auth/login", input), [authenticate]);
 
   const register = useCallback(
-    async (input: { name: string; email: string; password: string }) => {
-      const response = await fetch(apiUrl("/auth/register"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(input),
-      });
-
-      if (!response.ok) {
-        throw new Error(await parseApiError(response));
-      }
-
-      const data = await parseAuthResponse(response);
-      setSession(data.user, data.accessToken);
-    },
-    [setSession],
+    async (input: RegisterInput) => authenticate("/auth/register", input),
+    [authenticate],
   );
 
   const logout = useCallback(async () => {
@@ -150,13 +146,14 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
           headers.set("Content-Type", "application/json");
         }
 
+        if (token) {
+          headers.set("Authorization", `Bearer ${token}`);
+        }
+
         return fetch(apiUrl(path), {
           ...init,
           credentials: "include",
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            ...Object.fromEntries(headers.entries()),
-          },
+          headers,
         });
       };
 

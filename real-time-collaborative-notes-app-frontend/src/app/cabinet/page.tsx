@@ -3,6 +3,7 @@
 import { AuthGuard } from "@/components/auth-guard";
 import { UserAvatar } from "@/components/user-avatar";
 import { useAuth } from "@/contexts/auth-context";
+import { getErrorMessage } from "@/lib/error-message";
 import { parseApiError } from "@/lib/api";
 import { useMutation } from "@tanstack/react-query";
 import { ArrowLeft, Upload } from "lucide-react";
@@ -47,7 +48,7 @@ const CabinetPageContent = () => {
       setError(null);
     },
     onError: (err) => {
-      setError(err instanceof Error ? err.message : "Profilni yangilab bo'lmadi");
+      setError(getErrorMessage(err, "Profilni yangilab bo'lmadi"));
       setSuccess(null);
     },
   });
@@ -77,7 +78,7 @@ const CabinetPageContent = () => {
       setError(null);
     },
     onError: (err) => {
-      setError(err instanceof Error ? err.message : "Rasmni yuklab bo'lmadi");
+      setError(getErrorMessage(err, "Rasmni yuklab bo'lmadi"));
       setSuccess(null);
     },
   });

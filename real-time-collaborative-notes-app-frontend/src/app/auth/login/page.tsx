@@ -1,25 +1,21 @@
 "use client";
 
 import { useAuth } from "@/contexts/auth-context";
+import { getErrorMessage } from "@/lib/error-message";
+import { normalizeNextPath } from "@/lib/routing";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, useMemo, useState } from "react";
 
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [nextPath, setNextPath] = useState<string | null>(null);
-
-  useEffect(() => {
-    const next = new URLSearchParams(window.location.search).get("next");
-    if (next && next.startsWith("/")) {
-      setNextPath(next);
-    }
-  }, []);
+  const nextPath = useMemo(() => normalizeNextPath(searchParams.get("next")), [searchParams]);
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -27,11 +23,11 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      await login({ email, password });
+      await login({ email: email.trim(), password });
       const redirectPath = nextPath ?? "/dashboard";
       router.replace(redirectPath);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Tizimga kirib bo'lmadi");
+      setError(getErrorMessage(err, "Tizimga kirib bo'lmadi"));
     } finally {
       setLoading(false);
     }

@@ -3,6 +3,7 @@
 import { AuthGuard } from "@/components/auth-guard";
 import { UserAvatar } from "@/components/user-avatar";
 import { useAuth } from "@/contexts/auth-context";
+import { getErrorMessage } from "@/lib/error-message";
 import { parseApiError } from "@/lib/api";
 import { NoteSummary } from "@/lib/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +13,8 @@ import { CircleUserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
+const NOTES_QUERY_KEY = ["notes"] as const;
+
 const DashboardContent = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -20,7 +23,7 @@ const DashboardContent = () => {
   const [error, setError] = useState<string | null>(null);
 
   const notesQuery = useQuery({
-    queryKey: ["notes"],
+    queryKey: NOTES_QUERY_KEY,
     queryFn: async () => {
       const response = await authenticatedFetch("/notes");
       if (!response.ok) {
@@ -47,17 +50,17 @@ const DashboardContent = () => {
     },
     onSuccess: ({ note }) => {
       setTitle("");
-      void queryClient.invalidateQueries({ queryKey: ["notes"] });
-      router.push("/notes/" + note.id);
+      void queryClient.invalidateQueries({ queryKey: NOTES_QUERY_KEY });
+      router.push(`/notes/${note.id}`);
     },
     onError: (err) => {
-      setError(err instanceof Error ? err.message : "Hujjat yaratishda xatolik yuz berdi");
+      setError(getErrorMessage(err, "Hujjat yaratishda xatolik yuz berdi"));
     },
   });
 
   const deleteNote = useMutation({
     mutationFn: async (noteId: string) => {
-      const response = await authenticatedFetch("/notes/" + noteId, {
+      const response = await authenticatedFetch(`/notes/${noteId}`, {
         method: "DELETE",
       });
 
@@ -66,10 +69,10 @@ const DashboardContent = () => {
       }
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["notes"] });
+      void queryClient.invalidateQueries({ queryKey: NOTES_QUERY_KEY });
     },
     onError: (err) => {
-      setError(err instanceof Error ? err.message : "Hujjatni o'chirishda xatolik yuz berdi");
+      setError(getErrorMessage(err, "Hujjatni o'chirishda xatolik yuz berdi"));
     },
   });
 
@@ -146,7 +149,7 @@ const DashboardContent = () => {
               <span className="pill">{note._count.versions} versiya</span>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button className="button" onClick={() => router.push("/notes/" + note.id)} type="button">
+              <button className="button" onClick={() => router.push(`/notes/${note.id}`)} type="button">
                 Ochish
               </button>
               <button

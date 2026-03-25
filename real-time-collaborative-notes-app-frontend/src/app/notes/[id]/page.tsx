@@ -4,8 +4,10 @@ import { AuthGuard } from "@/components/auth-guard";
 import { CollaborativeEditor, EditorCommandApi } from "@/components/editor/collab-editor";
 import { UserAvatar } from "@/components/user-avatar";
 import { useAuth } from "@/contexts/auth-context";
+import { getErrorMessage } from "@/lib/error-message";
 import { parseApiError } from "@/lib/api";
 import { colorFromId } from "@/lib/presence-color";
+import { routeParamToString } from "@/lib/routing";
 import {
   CollaboratorChangedEvent,
   CollaboratorSuggestion,
@@ -61,8 +63,8 @@ type NoticeState = {
 type SidePanel = "collaborators" | "comments" | "history";
 
 const NotePageContent = () => {
-  const params = useParams<{ id: string }>();
-  const noteId = useMemo(() => String(params.id), [params.id]);
+  const params = useParams<{ id: string | string[] }>();
+  const noteId = useMemo(() => routeParamToString(params.id), [params.id]);
   const router = useRouter();
   const queryClient = useQueryClient();
   const { authenticatedFetch, accessToken, user, logout } = useAuth();
@@ -176,6 +178,13 @@ const NotePageContent = () => {
 
   const canManageCollaborators = note?.currentAccessRole === "OWNER";
   const canEdit = note?.currentAccessRole === "OWNER" || note?.currentAccessRole === "EDITOR";
+
+  const setErrorNotice = (error: unknown, fallback: string) => {
+    setNotice({
+      type: "error",
+      text: getErrorMessage(error, fallback),
+    });
+  };
 
   useEffect(() => {
     const nextTitle = (titleDraft ?? note?.title ?? "").trim();
